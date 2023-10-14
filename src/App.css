@@ -1,0 +1,77 @@
+.tetris-table {
+    background: black;
+    width: 400px;
+    height: 800px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.tetris-table__col {
+    width: 100%;
+    height: 38px;
+    display: flex;
+    flex-direction: row;
+    gap: 2px;
+}
+
+.tetris-table__row {
+    background: #999;
+    height: 38px;
+    width: 38px;
+}
+
+/*
+ ####
+ */
+.row-active__red {
+    background: red;
+}
+
+/*
+ ##
+ ##
+ */
+.row-active__blue {
+    background: blue;
+}
+
+/*
+ ##
+##
+ */
+.row-active__green {
+    background: green;
+}
+
+/*
+###
+ #
+*/
+.row-active__yellow {
+    background: yellow;
+}
+
+/*
+ ##
+  ##
+ */
+.row-active__cyan {
+    background: cyan;
+}
+
+/*
+###
+#
+*/
+.row-active__magenta {
+    background: magenta;
+}
+
+/*
+###
+  #
+*/
+.row-active__white {
+    background: white;
+}
