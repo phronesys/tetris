@@ -10,6 +10,7 @@ function TetrisTable() {
   const BOTTOM_LIMIT = table.length - 1;
   /* example with square block */
   const [fallingBlock, setFallingBlock] = useState(["0,4", "0,5", "1,4", "1,5"])
+  // const [fallingBlock, setFallingBlock] = useState(["0,4", "1,4", "2,4", "3,4"])
 
   /*
   * piece: position + shape
@@ -52,6 +53,12 @@ function TetrisTable() {
     return `tetris-table__row row-active__${color}`;
   }
 
+  function someCoordinateTouchesBottom(coordinates: string[]) {
+    return coordinates.some(coordinate => {
+      return coordinate.startsWith(`${BOTTOM_LIMIT}`)
+    })
+  }
+
   useEffect(() => {
     console.log(table)
   }, [table])
@@ -68,16 +75,17 @@ function TetrisTable() {
   });
 
   useEffect(() => {
-    const currentFallingBlock = fallingBlock.map(coordinate => {
-      const [col, row] = coordinate.split(",");
-      const colIndex = Number(col);
+    if (!someCoordinateTouchesBottom(fallingBlock)) {
+      const currentFallingBlock = fallingBlock.map(coordinate => {
+        const [col, row] = coordinate.split(",");
+        const colIndex = Number(col);
 
-      if (count === 0) return `${colIndex},${row}`;
-      if (count === BOTTOM_LIMIT) return `${colIndex},${row}`;
-      return `${colIndex + 1},${row}`
-    })
-    console.log(currentFallingBlock)
-    setFallingBlock(currentFallingBlock)
+        if (count === 0) return `${colIndex},${row}`;
+        return `${colIndex + 1},${row}`
+      })
+      setFallingBlock(currentFallingBlock)
+    }
+
   }, [count]);
 
   return (
