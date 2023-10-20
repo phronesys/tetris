@@ -72,35 +72,42 @@ function TetrisTable() {
   }
 
   /*
-  * find bigger col in fallingBlock, in other words
-  * is the colIndex of the base of the falling block
-  * */
-  const getBiggerColFallingBlock = (): number => {
-    let max = 0;
-    for(let i = 0; i < fallingBlock.length; i++){
+  * it finds coordinates of the fallingBlock's bottom
+  * by finding the bigger column index
+  *  */
+  const getFallingBlockBottomCoordinates = (): string[] => {
+    let biggerColumnIndex = 0;
+
+    for (let i = 0; i < fallingBlock.length; i++) {
       const [col] = fallingBlock[i].split(",")
       const colIndex = Number(col);
-      if(colIndex > max) max = colIndex;
+      if (colIndex > biggerColumnIndex) biggerColumnIndex = colIndex;
     }
 
-    return max;
+    return fallingBlock.filter(block => block.startsWith(`${biggerColumnIndex},`))
   }
 
   /*
   * check from the 4 coordinates of fallingBlock if one is touching
   * the end of the table, or it touches some inserted block
   * */
-  const isFallingBlockCollisioning = (): boolean => {
+  const isFallingBlockBottomCollisioning = (): boolean => {
     return fallingBlock.some(coordinate => {
       // when goes to the end
       const bottomCollision = coordinate.startsWith(`${LAST_COL}`);
       if (bottomCollision) return bottomCollision;
 
-      // check from inserted blocks if one correspond to the next col after the fallingBlock
+      // check bottom collision with inserted blocks
       return insertedBlocks.some(block => {
-        const nextColumnAfterFallingBlock = `${getBiggerColFallingBlock() + 1},`;
-        return block.startsWith(nextColumnAfterFallingBlock);
+        const fallingBlockBottomCoordinates = getFallingBlockBottomCoordinates();
+        return fallingBlockBottomCoordinates.some(bottomCoordinate => {
+          const [col, row] =  bottomCoordinate.split(",");
+          const nextColIndex = Number(col) + 1;
+
+          return block === `${nextColIndex},${row}`;
+        });
       });
+
     })
   }
 
@@ -123,18 +130,18 @@ function TetrisTable() {
     setFallingBlock(fb => {
 
 
-      if (isFallingBlockCollisioning()) {
+      if (isFallingBlockBottomCollisioning()) {
+        // block is inserted on collision
         setInsertedBlocks([...insertedBlocks, ...fallingBlock])
         setCount(0)
         return [];
       }
 
-
+      // update falling block coordinate positions
       return fb.map(coordinate => {
         const [col, row] = coordinate.split(",");
         const colIndex = Number(col);
 
-        if (count === 0) return `${colIndex},${row}`;
         return `${colIndex + 1},${row}`
       })
     })
