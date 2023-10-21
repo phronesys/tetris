@@ -27,7 +27,6 @@ function TetrisTable() {
     "19,9",
     "3,6"
   ])
-  const [rowDirection, setRowDirection] = useState(0);
 
   /*
   * piece: position + shape
@@ -40,18 +39,6 @@ function TetrisTable() {
     const colorIndex = Math.floor(Math.random() * tetrisColors.length)
     return tetrisColors[colorIndex]
   }
-
-  function updateRow(col: number, row: number, newValue: string) {
-    // copy the table
-    const updatedTable = [...table];
-    // copy the column
-    const updatedCol = [...updatedTable[col]];
-
-    updatedCol[row] = newValue;
-    updatedTable[col] = updatedCol;
-    setTable(updatedTable);
-  }
-
 
   /*
   * Paints block coordinates
@@ -95,15 +82,16 @@ function TetrisTable() {
   * it finds left and right coordinates of the fallingBlock
   * */
   const getFallingBlockLateralCoordinates = (fallingBlock: string[]): string[] => {
-    let minRowIndex = 19, maxRowIndex = 0;
+    let minRowIndex = 99, maxRowIndex = -1;
 
     for (let i = 0; i < fallingBlock.length; i++) {
       const [_col, row] = fallingBlock[i].split(",");
       const rowIndex = Number(row);
       if (rowIndex > maxRowIndex) maxRowIndex = rowIndex;
-      if (rowIndex > minRowIndex) minRowIndex = rowIndex;
+      if (rowIndex < minRowIndex) minRowIndex = rowIndex;
     }
 
+    console.log(minRowIndex, maxRowIndex)
     const leftCoordinates = fallingBlock.filter(coordinate => coordinate.endsWith(`,${minRowIndex}`));
     const rightCoordinates = fallingBlock.filter(coordinate => coordinate.endsWith(`,${maxRowIndex}`));
 
@@ -141,7 +129,6 @@ function TetrisTable() {
       // check table limit collision
       const limitLeft = direction === 'left' && coordinate.endsWith(`,${LIMIT_LEFT}`);
       const limitRight = direction === 'right' && coordinate.endsWith(`,${LIMIT_RIGHT}`);
-      console.log(coordinate, limitLeft, limitRight)
       const tableLimit = limitRight || limitLeft;
       if (tableLimit) return tableLimit;
 
@@ -149,6 +136,7 @@ function TetrisTable() {
       const fallingBlockLateralCoordinates = getFallingBlockLateralCoordinates(fallingBlock);
       // check if any insertedBlock has lateral collision with fallingBlock
       return insertedBlocks.some(insertedBlock => {
+        // console.log(fallingBlockLateralCoordinates)
         return fallingBlockLateralCoordinates.some(lateralCoordinate => {
           const [col, row] = lateralCoordinate.split(",");
           const directionMovement = direction === 'left' ? -1 : 1;
@@ -159,14 +147,6 @@ function TetrisTable() {
       })
     })
   };
-
-
-
-  function moveTowards(direction: 'left' | 'right') {
-    console.log(direction)
-
-
-  }
 
   /*
   * Rotation disabled, we need an algorithm to rotate by the center,
