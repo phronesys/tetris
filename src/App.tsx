@@ -1,4 +1,5 @@
-import {useEffect, useState} from 'react'
+import {useCallback, useEffect, useState} from 'react'
+import {useKey} from "react-use";
 import './App.css'
 
 function TetrisTable() {
@@ -7,7 +8,9 @@ function TetrisTable() {
   const [table, setTable] = useState<string[][]>(
     Array(20).fill(Array(10).fill(""))
   );
-  const LAST_COL = table.length - 1;
+  const LIMIT_BOTTOM = 19;
+  const LIMIT_RIGHT = 9;
+  const LIMIT_LEFT = 0;
   /* example with square block */
   const [fallingBlock, setFallingBlock] = useState(["0,4", "0,5", "1,4", "1,5"])
   // const [fallingBlock, setFallingBlock] = useState(["0,4", "1,4", "2,4", "3,4"])
@@ -24,6 +27,7 @@ function TetrisTable() {
     "19,9",
     "3,6"
   ])
+  const [rowDirection, setRowDirection] = useState(0);
 
   /*
   * piece: position + shape
@@ -84,32 +88,111 @@ function TetrisTable() {
       if (colIndex > biggerColumnIndex) biggerColumnIndex = colIndex;
     }
 
-    return fallingBlock.filter(block => block.startsWith(`${biggerColumnIndex},`))
+    return fallingBlock.filter(coordinate => coordinate.startsWith(`${biggerColumnIndex},`))
+  }
+
+  /*
+  * it finds left and right coordinates of the fallingBlock
+  * */
+  const getFallingBlockLateralCoordinates = (fallingBlock: string[]): string[] => {
+    let minRowIndex = 19, maxRowIndex = 0;
+
+    for (let i = 0; i < fallingBlock.length; i++) {
+      const [_col, row] = fallingBlock[i].split(",");
+      const rowIndex = Number(row);
+      if (rowIndex > maxRowIndex) maxRowIndex = rowIndex;
+      if (rowIndex > minRowIndex) minRowIndex = rowIndex;
+    }
+
+    const leftCoordinates = fallingBlock.filter(coordinate => coordinate.endsWith(`,${minRowIndex}`));
+    const rightCoordinates = fallingBlock.filter(coordinate => coordinate.endsWith(`,${maxRowIndex}`));
+
+    return [...leftCoordinates, ...rightCoordinates];
   }
 
   /*
   * check from the 4 coordinates of fallingBlock if one is touching
   * the end of the table, or it touches some inserted block
   * */
-  const isFallingBlockBottomCollisioning = (): boolean => {
+  const fallingBlockBottomCollision = (): boolean => {
     return fallingBlock.some(coordinate => {
       // when goes to the end
-      const bottomCollision = coordinate.startsWith(`${LAST_COL}`);
-      if (bottomCollision) return bottomCollision;
+      const tableLimit = coordinate.startsWith(`${LIMIT_BOTTOM}`);
+      if (tableLimit) return tableLimit;
+      // console.log(coordinate)
+
+      const fallingBlockBottomCoordinates = getFallingBlockBottomCoordinates();
 
       // check bottom collision with inserted blocks
-      return insertedBlocks.some(block => {
-        const fallingBlockBottomCoordinates = getFallingBlockBottomCoordinates();
+      return insertedBlocks.some(insertedBlock => {
         return fallingBlockBottomCoordinates.some(bottomCoordinate => {
-          const [col, row] =  bottomCoordinate.split(",");
+          const [col, row] = bottomCoordinate.split(",");
           const nextColIndex = Number(col) + 1;
 
-          return block === `${nextColIndex},${row}`;
+          return insertedBlock === `${nextColIndex},${row}`;
         });
       });
 
     })
   }
+
+  const fallingBlockLateralCollision = (fallingBlock: string[], direction: 'left' | 'right'): boolean => {
+    return fallingBlock.some(coordinate => {
+      // check table limit collision
+      const limitLeft = direction === 'left' && coordinate.endsWith(`,${LIMIT_LEFT}`);
+      const limitRight = direction === 'right' && coordinate.endsWith(`,${LIMIT_RIGHT}`);
+      console.log(coordinate, limitLeft, limitRight)
+      const tableLimit = limitRight || limitLeft;
+      if (tableLimit) return tableLimit;
+
+      // get left and right coordinates of the block
+      const fallingBlockLateralCoordinates = getFallingBlockLateralCoordinates(fallingBlock);
+      // check if any insertedBlock has lateral collision with fallingBlock
+      return insertedBlocks.some(insertedBlock => {
+        return fallingBlockLateralCoordinates.some(lateralCoordinate => {
+          const [col, row] = lateralCoordinate.split(",");
+          const directionMovement = direction === 'left' ? -1 : 1;
+          const nextRowIndex = Number(row) + directionMovement;
+
+          return insertedBlock === `${col},${nextRowIndex}`;
+        })
+      })
+    })
+  };
+
+
+
+  function moveTowards(direction: 'left' | 'right') {
+    console.log(direction)
+
+
+  }
+
+  /*
+  * Rotation disabled, we need an algorithm to rotate by the center,
+  * but not all pieces have a center coordinate
+  * */
+  // function rotateTowards(direction: 'clockwise' | 'counterclockwise'){
+  //   // clockwise:         (x,y) becomes (y,−x)
+  //   // counterclockwise:  (x,y) becomes (−y,x)
+  //   if (direction === 'clockwise') {
+  //     setFallingBlock(fb => fb.map(block => {
+  //       const [col, row] = block.split(",");
+  //       const colIndex = Number(col) * -1;
+  //       const rowIndex = Number(row);
+  //
+  //       return `${rowIndex},${colIndex}`
+  //     }));
+  //   } else {
+  //     setFallingBlock(fb => fb.map(block => {
+  //       const [col, row] = block.split(",");
+  //       const colIndex = Number(col);
+  //       const rowIndex = Number(row) * -1;
+  //
+  //       return `${rowIndex},${colIndex}`
+  //     }));
+  //   }
+  // }
 
   useEffect(() => {
     console.log(table)
@@ -118,7 +201,7 @@ function TetrisTable() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      if (count !== LAST_COL) {
+      if (count !== LIMIT_BOTTOM) {
         setCount(count + 1)
       }
     }, 1000)
@@ -126,11 +209,53 @@ function TetrisTable() {
     return () => clearInterval(interval);
   });
 
+  const handleUserInput = useCallback((event: KeyboardEvent) => {
+    const {key} = event;
+    console.log("handleUser Input", key)
+
+    if (key === 'a' || key === 'ArrowLeft') {
+      setFallingBlock(fb => {
+        if (fallingBlockLateralCollision(fb, 'left')) return fb;
+
+        return fb.map(block => {
+          const [col, row] = block.split(",");
+          const colIndex = Number(col);
+          const rowIndex = Number(row);
+
+          return `${colIndex},${rowIndex - 1}`;
+        })
+      })
+    }
+    else if (key === 'd' || key === 'ArrowRight') {
+      setFallingBlock(fb => {
+        if (fallingBlockLateralCollision(fb, 'right')) return fb;
+
+        return fb.map(block => {
+          const [col, row] = block.split(",");
+          const colIndex = Number(col);
+          const rowIndex = Number(row);
+
+          return `${colIndex},${rowIndex + 1}`;
+        })
+      })
+    }
+      // else if (key === 'w' || key === 'ArrowUp') rotateTowards('clockwise');
+    // else if (key === 's' || key === 'ArrowDown') rotateTowards('counterclockwise');
+    else if (key === '') () => {
+      // handle space input
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleUserInput);
+    () => window.removeEventListener('keydown', handleUserInput)
+  }, [handleUserInput]);
+
   useEffect(() => {
     setFallingBlock(fb => {
 
 
-      if (isFallingBlockBottomCollisioning()) {
+      if (fallingBlockBottomCollision()) {
         // block is inserted on collision
         setInsertedBlocks([...insertedBlocks, ...fallingBlock])
         setCount(0)
